@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Ballistics calculator for Iron Nest. Enter distance and shell type to instantly calculate required elevation angle and time of flight." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Iron Nest Ballistics Calculator" />
+  <meta property="og:description" content="Quickly calculate required elevation for artillery shots in Iron Nest." />
+  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+  <title>Iron Nest Ballistics Calculator</title>
+  <link rel="stylesheet" href="./style.css?v=20261009-6" />
+</head>
+<body>
+  <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-calculator" viewBox="0 0 9 9">
+      <path d="M1,3H2V4H3V3H4V2H3V1H2V2H1z" fill="currentColor" />
+      <rect fill="currentColor" height="1" width="3" x="5" y="2" />
+      <rect fill="currentColor" height="1" width="1" x="1" y="5" />
+      <rect fill="currentColor" height="1" width="1" x="3" y="5" />
+      <path d="M6,6H5V7H6V8H7V7H8V6H7V5H6z" fill="currentColor" />
+      <rect fill="currentColor" height="1" width="1" x="2" y="6" />
+      <rect fill="currentColor" height="1" width="1" x="1" y="7" />
+      <rect fill="currentColor" height="1" width="1" x="3" y="7" />
+    </symbol>
+  </svg>
+
+  <main class="crt">
+    <div class="scroll-wrapper">
+      <div class="inner-wrapper">
+        <div class="bounding-box-outer header">
+          <div class="bounding-box"><h1>IRON NEST BALLISTICS CALCULATOR</h1></div>
+          <p class="subtitle">&gt;&gt; Assured compatible with v1.0</p>
+        </div>
+
+        <form id="calculator" novalidate>
+          <div class="distance bounding-box-outer">
+            <label for="distance">
+              &gt; DISTANCE
+              <span class="bounding-box input-with-unit">
+                <input class="ghost-input" id="distance" inputmode="none" readonly type="text" autocomplete="off" />
+                <span class="value-display" data-field="distance">00.00</span>
+                <span>km</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="bearing bounding-box-outer">
+            <label for="bearing">
+              &gt; BEARING
+              <span class="bounding-box input-with-unit">
+                <input class="ghost-input" id="bearing" inputmode="none" readonly type="text" autocomplete="off" />
+                <span class="value-display" data-field="bearing">000.0</span>
+                <span>deg</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="shell-type bounding-box-outer">
+            <p>&gt; Shell Type</p>
+            <div class="shell-dd bounding-box" id="shell-dd">
+              <button type="button" id="shell-dd-btn" aria-haspopup="listbox" aria-expanded="false">EMPT</button>
+              <ul id="shell-dd-list" class="shell-dd-list" role="listbox" hidden></ul>
+            </div>
+          </div>
+
+          <div class="side bounding-box-outer">
+            <p>&gt; SIDE</p>
+            <div class="side-toggle">
+              <button class="charge-button bounding-box side-button is-selected" type="button" data-side="LEFT">LEFT</button>
+              <button class="charge-button bounding-box side-button" type="button" data-side="RIGHT">RIGHT</button>
+              <button class="charge-button bounding-box side-button" type="button" data-side="ANY">ANY</button>
+            </div>
+          </div>
+
+          <div class="impact bounding-box-outer">
+            <div class="impact-row">
+              <label for="impact">
+                &gt; IMPACT AT (OPT)
+                <span class="bounding-box input-with-unit">
+                  <input class="ghost-input" id="impact" inputmode="none" readonly type="text" autocomplete="off" />
+                  <span class="value-display" data-field="impact">00:00</span>
+                  <span>mm:ss</span>
+                </span>
+              </label>
+              <button id="btn-clear-impact" class="bounding-box" type="button">CLEAR ALL</button>
+            </div>
+          </div>
+
+          <div class="charges-outer">
+            &gt; CHARGES
+            <div class="charges">
+              <button class="charge-button bounding-box" type="button">1</button>
+              <button class="charge-button bounding-box" type="button">2</button>
+              <button class="charge-button bounding-box" type="button">3</button>
+              <button class="charge-button bounding-box" type="button">4</button>
+              <button class="charge-button bounding-box" type="button">5</button>
+              <button class="charge-button bounding-box" type="button">6</button>
+            </div>
+          </div>
+
+          <div class="numpad bounding-box-outer">
+            <p>&gt; KEYPAD</p>
+            <div class="numpad-grid">
+              <button type="button" class="bounding-box num-key" data-key="7">7</button>
+              <button type="button" class="bounding-box num-key" data-key="8">8</button>
+              <button type="button" class="bounding-box num-key" data-key="9">9</button>
+              <button type="button" class="bounding-box num-key" data-key="4">4</button>
+              <button type="button" class="bounding-box num-key" data-key="5">5</button>
+              <button type="button" class="bounding-box num-key" data-key="6">6</button>
+              <button type="button" class="bounding-box num-key" data-key="1">1</button>
+              <button type="button" class="bounding-box num-key" data-key="2">2</button>
+              <button type="button" class="bounding-box num-key" data-key="3">3</button>
+              <button type="button" class="bounding-box num-key" data-key="Backspace">BKSP</button>
+              <button type="button" class="bounding-box num-key" data-key="0">0</button>
+              <button type="button" class="bounding-box num-key" id="num-next" data-key="next">NEXT</button>
+            </div>
+          </div>
+
+          <div class="result bounding-box-outer">
+            <p>&gt; CALCULATED ELEVATION (DEG)</p>
+            <div class="bounding-box" id="result-container">
+              <div class="dim" id="result-numbers">
+                <div class="result-error"></div>
+                <span class="elevation-display"><span class="elevation-display" id="elevation-value">00.00</span>°</span>
+                <span><span id="tta-value">00.00</span><span id="tta-suffix"> to arrive</span></span>
+              </div>
+              <div class="hr" style="width:90%"></div>
+              <div class="calculate-button-wrapper">
+                <button aria-label="Calculate" class="bounding-box" id="btn-calculate" type="button">
+                  <svg><use href="#icon-calculator" /></svg>
+                </button>
+                <button aria-label="Calculate and queue" class="bounding-box" id="btn-calculate-and-queue" type="button">
+                  <svg><use href="#icon-calculator" /></svg>
+                  &amp; Queue
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <div id="queue"></div>
+      </div>
+    </div>
+  </main>
+  <script src="./app.js?v=20261009-6" defer></script>
+  <script src="./fit.js?v=20261009-6" defer></script>
+</body>
+</html>
