@@ -22,7 +22,7 @@ const TIME = { totalDigits: 4 }; // MM:SS, 内部整数 = MMSS(如3500→35:00),
 const KM_PER_CHARGE = 5;
 const MAX_DIST = 30;
 const SHELL_DEFAULTS = ['EMPT','AP','APHE','ATMC','CLMN','CYAN','DRIL','EQKE','FLCH','HCHE','HE','INCN','LE','PLCM','PHGN','PRPG','SMK','STAR','TEAR','THRM','WP'];
-// 游戏内 21 种弹药全称(供下拉框展示,code 沿用原站缩写)
+// In-game shell full names (for the dropdown; codes match the original abbreviations)
 const SHELL_META = { EMPT:'Empty', AP:'Armour-Piercing', APHE:'AP High-Explosive', ATMC:'Atomic', CLMN:'Cluster', CYAN:'Cyanogen Gas', DRIL:'Drill / Practice', EQKE:'Earthquake', FLCH:'Flechette', HCHE:'High-Capacity HE', HE:'High-Explosive', INCN:'Incendiary', LE:'Low-Explosive', PLCM:'Parachute Cluster', PHGN:'Phosgene', PRPG:'Propaganda', SMK:'Smoke', STAR:'Illumination', TEAR:'Tear Gas', THRM:'Thermal Incendiary', WP:'White Phosphorus' };
 
 // ---------- 状态 ----------
