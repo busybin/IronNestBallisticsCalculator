@@ -7,7 +7,7 @@ bearing, shell type and charge count to get the required elevation angle and
 time-to-target, and keep a target queue. Everything runs in the browser —
 no backend, no build step.
 
-**Live:** https://busybin.github.io/iron-nest-ballistics-calculator/
+**Live:** https://busybin.github.io/IronNestBallisticsCalculator/
 
 ## Features
 
