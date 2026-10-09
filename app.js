@@ -1,13 +1,17 @@
-/* Iron Nest Ballistics Calculator —逆向重写版 (vanilla JS)
- * 原站: https://iron-nest.shiru.dog/ (Vite + preact-signals + lit-html, 单文件 bundle)
- * 本文件为可读重实现,逻辑与原 bundle 1:1 对齐,去掉了 signals/lit 运行时。
+/* Iron Nest Ballistics Calculator — vanilla JS
  *
- * 核心公式 (来自原 index-DpIgqwSD.js):
+ * Unofficial, independent implementation of the Iron Nest calculator.
+ * Original design & ballistics model: the author of https://iron-nest.shiru.dog/
+ * (originally built with Vite + preact-signals + lit-html). This version keeps
+ * the same behaviour and formulas and drops those runtimes.
+ *
+ * Maintained by busybin — https://github.com/busybin
+ *
+ * Core formulas:
  *   elevation(deg) = 12 * distance_km / charges
- *   r = (charges-1)/5
- *   smooth = 3r^2 - 2r^3
- *   tta(s) = distance_km / (shellSpeed * (0.3 + 0.7*smooth)), shellSpeed 默认为 0.7
- *   minCharges = ceil(distance_km/5) ; 1..6, 超过 30km 报错 INSUFFICIENT CHARGES
+ *   r = (charges-1)/5 ; smooth = 3r^2 - 2r^3
+ *   tta(s) = distance_km / (shellSpeed * (0.3 + 0.7*smooth)), shellSpeed = 0.7
+ *   minCharges = ceil(distance_km/5) ; >30km → INSUFFICIENT CHARGES
  */
 'use strict';
 
