@@ -1,5 +1,7 @@
 # Iron Nest Ballistics Calculator
 
+![Iron Nest Ballistics Calculator](./screenshot.png)
+
 A static, single-page ballistics calculator for **Iron Nest**. Enter distance,
 bearing, shell type and charge count to get the required elevation angle and
 time-to-target, and keep a target queue. Everything runs in the browser —
