@@ -225,11 +225,12 @@ function feedNumericKey(field, key) {
     disarm();
     let v = get() * 10 + d;
     if (v > maxRaw) return;
-    if (cfg.maxValue && v > cfg.maxValue) v = cfg.maxValue;
+    const clamped = cfg.maxValue && v > cfg.maxValue;
+    if (clamped) v = cfg.maxValue;
     set(v);
     state.digCount[field]++;
-    if (state.digCount[field] >= cfg.totalDigits) {
-      // 本框已输满,自动跳下一框
+    if (!clamped && state.digCount[field] >= cfg.totalDigits) {
+      // 本框已输满,自动跳下一框(被上限钳住时不跳,免得"多打一位"莫名跳格)
       focusField(field === 'distance' ? 'bearing' : 'impact');
     }
   } else if (key === '.') {
@@ -382,6 +383,7 @@ function refreshShellList() {
     b.type = 'button';
     b.dataset.val = s.label;
     b.textContent = shellBtnLabel(s.label);
+    if (SHELL_META[s.label]) b.title = SHELL_META[s.label]; // 只约定显示 code,全称放 tooltip
     if (s.label === keep) {
       b.setAttribute('aria-selected', 'true');
       li.classList.add('is-cur');
@@ -439,14 +441,27 @@ function bumpShellUsage() {
   persistShells();
   refreshShellList(); // 常用弹药自动排前面,保持当前选中
 }
-function bindShell() {
+function loadShells() {
+  // 只把 localStorage 里的 timesUsed 合并进默认弹药表。
+  // 旧版本存下的表可能少弹药 / 字段损坏,整表替换会让弹药从下拉里消失。
+  const base = SHELL_DEFAULTS.map(label => ({ label, shellSpeed: 0.7, timesUsed: 0 }));
   try {
     const raw = localStorage.getItem('shells');
-    if (raw) {
-      const arr = JSON.parse(raw);
-      if (Array.isArray(arr) && arr.length) state.shells = arr;
+    if (!raw) return base;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return base;
+    const used = new Map();
+    for (const e of arr) {
+      if (!e || typeof e.label !== 'string') continue;
+      const n = Number(e.timesUsed);
+      if (!Number.isFinite(n) || n < 0) continue;
+      used.set(e.label, Math.floor(n));
     }
-  } catch {}
+    return base.map(s => ({ ...s, timesUsed: used.get(s.label) ?? 0 }));
+  } catch { return base; }
+}
+function bindShell() {
+  state.shells = loadShells();
   if (!currentShell()) state.shellInput = 'EMPT';
   refreshShellList();
   shellDdBtn.addEventListener('click', () => {
@@ -520,33 +535,39 @@ function renderQueue() {
       '<button data-act="dim" data-id="' + t.id + '"><svg viewBox="0 0 7 5" shape-rendering="crispEdges"><rect x="0" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/></svg></button>' +
       '</div></article></div>';
   }).join('') + '</section>';
-  const clearQ = $('#btn-clear-queue');
-  if (clearQ) clearQ.addEventListener('click', () => {
-    state.queue = [];
-    state.queueDimmed.clear();
-    renderQueue();
-  });
   state.flashIds.clear(); // 出现动画只播一次,后续重排不再触发
   if (window.__ironFit) window.__ironFit(); // 队列高度变化后重新适配视口
-  queueEl.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-    const id = Number(b.dataset.id), act = b.dataset.act;
+}
+// 队列只绑一个委托监听:整列重建也不会漏绑/重复绑(原先每次 render 给每张卡片的每个按钮重绑一次)
+function bindQueue() {
+  queueEl.addEventListener('click', e => {
+    const btn = e.target.closest('button');
+    if (!btn || !queueEl.contains(btn)) return;
+    if (btn.id === 'btn-clear-queue') {
+      state.queue = [];
+      state.queueDimmed.clear();
+      renderQueue();
+      return;
+    }
+    const id = Number(btn.dataset.id), act = btn.dataset.act;
     const i = state.queue.findIndex(t => t.id === id);
     if (i === -1) return;
     if (act === 'del') {
       // 删除后其后续卡片依次重播出现动画
       state.flashIds = new Set(state.queue.slice(i + 1).map(t => t.id));
       state.queue = state.queue.filter(t => t.id !== id);
-    }
-    else if (act === 'dim') {
+    } else if (act === 'dim') {
       if (state.queueDimmed.has(id)) state.queueDimmed.delete(id);
       else state.queueDimmed.add(id);
     } else if (act === 'up' && i > 0) {
       const a = [...state.queue]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; state.queue = a;
     } else if (act === 'down' && i < state.queue.length - 1) {
       const a = [...state.queue]; [a[i + 1], a[i]] = [a[i], a[i + 1]]; state.queue = a;
+    } else {
+      return;
     }
     renderQueue();
-  }));
+  });
 }
 
 // ---------- 计算 ----------
@@ -555,7 +576,6 @@ function calculate() {
   const distKm = state.distance / 100;
   if (state.distance === 0) { showError('ENTER DISTANCE'); return [-1, -1]; }
   if (distKm > MAX_DIST) { showError('INSUFFICIENT CHARGES'); return [-1, -1]; }
-  bumpShellUsage();
   const ch = effectiveCharges();
   const e = calcElevation(distKm, ch);
   const t = calcTTA(distKm, ch, currentShell()?.shellSpeed);
@@ -568,6 +588,7 @@ function calculate() {
     fire = impactToSec(state.impact) - t;
     if (fire < 0) { showError('TOO LATE'); return [-1, -1]; }
   }
+  bumpShellUsage(); // 只有真正算成功才计入"常用弹药",失败(时间非法/太晚)不该污染排序
   clearError();
   elevTween.tweenTo(e);
   ttaFireMode = fire !== null;
@@ -646,6 +667,7 @@ bindTime(impactInput, impactDisp);
 bindShell();
 bindSide();
 bindNumpad();
+bindQueue();
 syncPadKey();
 $('#btn-clear-impact').addEventListener('click', () => {
   // 全清所有输入值(shell/side 也重置),不动队列;高亮框重置到第一个框

@@ -101,3 +101,10 @@ body.fit-ready #queue>*{flex:0 0 auto}
 .queue-shell-text{font-size:2rem}
 .queue-card header svg{height:2.75rem}
 h1{font-size:4rem}
+
+/* --- 访问统计(GoatCounter，见 counter.js / README「访问统计」)。追加样式，不动上面的原站 1:1 部分。
+   未配置站点码时 counter.js 不填内容，元素靠 hidden 隐藏。 --- */
+.visitors{display:flex;gap:2rem;margin:.25rem 0 1rem;font-size:1.25rem;color:var(--dim)}
+.visitors[hidden]{display:none}
+.visitors>span{font-size:1.25rem;color:var(--dim)}
+.visitors .visitors-num{font-size:1.5rem;color:var(--bright)}
