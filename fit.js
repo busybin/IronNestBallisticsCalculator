@@ -66,6 +66,10 @@
     schedule();
     window.addEventListener('resize', schedule, { passive: true });
     window.addEventListener('orientationchange', schedule, { passive: true });
+    // 手机地址栏收放 / 软键盘弹起只改 visualViewport,不改 window 尺寸
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', schedule, { passive: true });
+    }
     if (document.fonts && document.fonts.ready) {
       document.fonts.ready.then(schedule).catch(function () {});
     }

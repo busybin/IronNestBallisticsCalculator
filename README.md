@@ -29,6 +29,39 @@ npx serve .
 
 GitHub Pages — source branch `main`, folder `/`.
 
+## Visitor counter (optional)
+
+The header can show `VISITORS` / `TODAY` via `counter.js`, backed by
+[GoatCounter](https://www.goatcounter.com/) — free, open source, cookie-less.
+GoatCounter counts *unique visits* (deduplicated on site ID + User-Agent + IP),
+so these are unique visitors, not raw page loads.
+
+**Nothing is tracked until you configure it**: with no site code set,
+`counter.js` makes no request at all and the counter stays hidden.
+
+To enable:
+
+1. Sign up at <https://www.goatcounter.com/signup>. The *account name* you pick
+   becomes your site code (e.g. `ironnest` → `https://ironnest.goatcounter.com`).
+   *Site domain* can be `busybin.github.io`. No e-mail confirmation step.
+2. Open `https://<code>.goatcounter.com/settings` and tick
+   **“Allow adding visitor counts on your website”** (off by default —
+   without it the counter endpoint returns `403`).
+3. Put `<code>` into `CODE` at the top of `counter.js`.
+
+Notes:
+
+- `VISITORS` = all-time total. `TODAY` = current UTC day: the counter endpoint
+  only accepts UTC dates, and it caches responses for up to 4 hours, so today's
+  number can lag a little.
+- To keep your own visits out of the stats, add your IP under
+  *Settings → Tracking → Ignore IPs*, or click *disable for this browser* there.
+- The raw endpoint is
+  `https://<code>.goatcounter.com/counter/TOTAL.json?start=YYYY-MM-DD&end=YYYY-MM-DD`
+  (returns `{"count":"1,234"}`; CORS-enabled).
+- Ad blockers often block GoatCounter; when the request fails the counter just
+  stays hidden.
+
 ## Credits
 
 - **Original:** the Iron Nest calculator by the author of
