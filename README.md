@@ -51,14 +51,21 @@ To enable:
 
 Notes:
 
+- `counter.js` also **reports the pageview itself** (a `GET /count?p=…` via
+  `navigator.sendBeacon`, same protocol as the official `count.js`), so no
+  third-party script is loaded. It skips prerenders, iframes, `file://`,
+  private/local addresses (so visiting the LAN copy doesn't pollute the stats),
+  and anything with the `skipgc` "disable for this browser" flag.
 - `VISITORS` = all-time total. `TODAY` = current UTC day: the counter endpoint
   only accepts UTC dates, and it caches responses for up to 4 hours, so today's
   number can lag a little.
-- To keep your own visits out of the stats, add your IP under
-  *Settings → Tracking → Ignore IPs*, or click *disable for this browser* there.
-- The raw endpoint is
+- To keep your own visits out of the stats, click *disable for this browser*
+  under *Settings → Tracking* (that is what sets `skipgc`; *Ignore IPs* may not
+  match because GoatCounter compares it against `IP:port`).
+- The raw endpoints are
+  `https://<code>.goatcounter.com/count?p=<path>` (report) and
   `https://<code>.goatcounter.com/counter/TOTAL.json?start=YYYY-MM-DD&end=YYYY-MM-DD`
-  (returns `{"count":"1,234"}`; CORS-enabled).
+  (read; returns `{"count":"1,234"}`; both CORS-enabled).
 - Ad blockers often block GoatCounter; when the request fails the counter just
   stays hidden.
 
