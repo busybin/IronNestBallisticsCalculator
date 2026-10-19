@@ -16,7 +16,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/x-icon" href="./favicon.ico" />
   <title>Iron Nest Ballistics Calculator</title>
-  <!-- 字体是首屏必需资源,favicon 的 icon 之外提前拉一把,省一次"发现并请求" -->
+  <!-- Preload the font: it is needed for first paint. -->
   <link rel="preload" as="font" type="font/woff2" href="./VT323.woff2" crossorigin />
   <link rel="stylesheet" href="./style.css?v=20261016-1" />
 </head>
@@ -40,7 +40,7 @@
         <div class="bounding-box-outer header">
           <div class="bounding-box"><h1>IRON NEST BALLISTICS CALCULATOR</h1></div>
           <p class="subtitle">&gt;&gt; Assured compatible with v1.0</p>
-          <!-- 访问统计(GoatCounter)。未配置站点码时由 counter.js 保持 hidden,不留半截 UI。 -->
+          <!-- Visitor counter (GoatCounter); counter.js keeps it hidden until a site code is set. -->
           <p class="visitors" id="visitors" hidden>
             <span>&gt; VISITORS <span class="visitors-num" id="visitors-total">--</span></span>
             <span>&gt; TODAY <span class="visitors-num" id="visitors-today">--</span></span>

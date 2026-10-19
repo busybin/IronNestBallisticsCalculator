@@ -15,40 +15,37 @@
  */
 'use strict';
 
-// ---------- 常量 ----------
-const DIST = { totalDigits: 4, decimalPlaces: 2 }; // 00.00 km, 内部整数 = km*100
-const BEAR = { totalDigits: 4, decimalPlaces: 1, maxValue: 3600 }; // 内部整数 = deg*10, 上限360.0
-const TIME = { totalDigits: 4 }; // MM:SS, 内部整数 = MMSS(如3500→35:00), 00:00视为空(可选参数)
+const DIST = { totalDigits: 4, decimalPlaces: 2 }; // internal int = km*100
+const BEAR = { totalDigits: 4, decimalPlaces: 1, maxValue: 3600 }; // internal int = deg*10, capped at 360.0
+const TIME = { totalDigits: 4 }; // internal int = MMSS (3500 -> 35:00); 00:00 means unset
 const KM_PER_CHARGE = 5;
 const MAX_DIST = 30;
 const SHELL_DEFAULTS = ['EMPT','AP','APHE','ATMC','CLMN','CYAN','DRIL','EQKE','FLCH','HCHE','HE','INCN','LE','PLCM','PHGN','PRPG','SMK','STAR','TEAR','THRM','WP'];
 // In-game shell full names (for the dropdown; codes match the original abbreviations)
 const SHELL_META = { EMPT:'Empty', AP:'Armour-Piercing', APHE:'AP High-Explosive', ATMC:'Atomic', CLMN:'Cluster', CYAN:'Cyanogen Gas', DRIL:'Drill / Practice', EQKE:'Earthquake', FLCH:'Flechette', HCHE:'High-Capacity HE', HE:'High-Explosive', INCN:'Incendiary', LE:'Low-Explosive', PLCM:'Parachute Cluster', PHGN:'Phosgene', PRPG:'Propaganda', SMK:'Smoke', STAR:'Illumination', TEAR:'Tear Gas', THRM:'Thermal Incendiary', WP:'White Phosphorus' };
 
-// ---------- 状态 ----------
 const state = {
   distance: 0, // int
   bearing: 0,  // int
-  chargesOverride: null, // 用户手动选的 index(0-based), null=自动最小
+  chargesOverride: null, // 0-based user pick, null = auto minimum
   shells: SHELL_DEFAULTS.map(label => ({ label, shellSpeed: 0.7, timesUsed: 0 })),
   shellInput: 'EMPT',
-  side: 'LEFT', // LEFT / RIGHT 单选(替代原自由文本 Label)
-  impact: 0, // 整数 MMSS,如 3500 = 35:00; 0 = 未填(可选)
+  side: 'LEFT',
+  impact: 0, // int MMSS (3500 = 35:00); 0 = unset
   impactArmedReset: false,
   queue: [],
   queueDimmed: new Set(),
   nextId: 0,
   distArmedReset: false,
   bearArmedReset: false,
-  activeField: 'distance', // 九宫格当前目标输入框 distance/bearing/impact
-  digCount: { distance: 0, bearing: 0, impact: 0 }, // 各框已输入位数,满位自动跳下一框
-  flashIds: new Set(), // 需要播放出现动画的卡片 id(新入队/删除后后续卡),渲染后清空
+  activeField: 'distance',
+  digCount: { distance: 0, bearing: 0, impact: 0 }, // digits entered per field; auto-advances when full
+  flashIds: new Set(), // card ids to animate in; cleared after render
 };
-// 小数点输入模式:按 "." 后接下来的 decimalPlaces 个数字直接填小数位,不再移位
+// "." mode: the next decimalPlaces digits fill the fraction in place instead of shifting
 let frac = { field: null, count: 0, val: 0 };
 function fracReset() { frac = { field: null, count: 0, val: 0 }; }
 
-// ---------- 公式 ----------
 function calcElevation(distKm, charges) {
   if (!(distKm > 0 && distKm <= MAX_DIST) || charges > 6 || charges < 1) return undefined;
   return (12 * distKm) / charges;
@@ -70,14 +67,13 @@ function effectiveChargeIndex() {
 }
 const effectiveCharges = () => effectiveChargeIndex() + 1;
 
-// ---------- 格式化 ----------
 function fmtInt(v, totalDigits, decimalPlaces) {
   const s = String(v).padStart(totalDigits, '0');
   const cut = totalDigits - decimalPlaces;
   return s.slice(0, cut) + '.' + s.slice(cut);
 }
 function fmtMMSS(v) {
-  // 冒号沿用 "." 的数字逻辑:内部4位整数,前2位分后2位秒,如3500→35:00
+  // same digit logic as ".": 4-digit int, MM then SS
   const s = String(v).padStart(4, '0');
   return s.slice(0, 2) + ':' + s.slice(2);
 }
@@ -86,14 +82,13 @@ function impactToSec(v) {
   return Number(s.slice(0, 2)) * 60 + Number(s.slice(2));
 }
 function fmtFire(sec) {
-  // 发射时间点 MM:SS,小数直接丢弃(向下取整),如 2073.85 → 34:33
+  // fire time MM:SS, fractional seconds dropped (2073.85 -> 34:33)
   const t = Math.floor(sec);
   const mm = Math.floor(t / 60);
   const ss = t - mm * 60;
   return String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
 }
 
-// ---------- cubic-bezier tween (原 Ft/Pt) ----------
 function cubicBezier(x1, y1, x2, y2) {
   const cx = 3 * x1 - 3 * x2 + 1, bx = 3 * x2 - 6 * x1, ax = 3 * x1;
   const cy = 3 * y1 - 3 * y2 + 1, by = 3 * y2 - 6 * y1, ay = 3 * y1;
@@ -147,7 +142,7 @@ const elevEl = $('#elevation-value'), ttaEl = $('#tta-value'), ttaSuffix = $('#t
 const queueEl = $('#queue');
 
 const elevTween = makeTween(elevEl, v => v.toFixed(2).padStart(5, '0'));
-let ttaFireMode = false; // true 时 TTA 位显示发射时间点 MM:SS.cc
+let ttaFireMode = false;
 const ttaTween = makeTween(ttaEl, v => ttaFireMode ? fmtFire(v) : v.toFixed(2).padStart(5, '0'));
 
 let errTimer = null;
@@ -162,9 +157,8 @@ function clearError() {
   errBox.classList.remove('visible');
 }
 
-// ---------- distance / bearing / impact 输入 (ghost-input 模式) ----------
 function flap(el) {
-  // 翻牌:重启动画,每次数字变化(含回退)翻一次
+  // force a reflow so the flip animation restarts on every change
   el.classList.remove('flap');
   void el.offsetWidth;
   el.classList.add('flap');
@@ -193,7 +187,7 @@ function armResetAll() {
   impactDisp.classList.add('is-armed-for-reset');
   distInput.focus();
 }
-// key: '0'-'9' | '.' | 'Backspace' | 'clear',物理键盘与九宫格共用
+// shared by the physical keyboard and the on-screen pad
 function feedNumericKey(field, key) {
   const isDist = field === 'distance';
   const cfg = isDist ? DIST : BEAR;
@@ -213,7 +207,7 @@ function feedNumericKey(field, key) {
   if (key >= '0' && key <= '9') {
     const d = Number(key);
     if (frac.field === field && frac.count < cfg.decimalPlaces) {
-      // 小数点后:第1个数字填十分位/百分位首位,第2个填末位,不再整体移位
+      // fraction digits fill in place, no shift
       frac.val = frac.val * 10 + d;
       frac.count++;
       const base = Math.floor(get() / 10 ** cfg.decimalPlaces) * 10 ** cfg.decimalPlaces;
@@ -230,7 +224,7 @@ function feedNumericKey(field, key) {
     set(v);
     state.digCount[field]++;
     if (!clamped && state.digCount[field] >= cfg.totalDigits) {
-      // 本框已输满,自动跳下一框(被上限钳住时不跳,免得"多打一位"莫名跳格)
+      // auto-advance when full; not when clamped, to avoid a phantom jump
       focusField(field === 'distance' ? 'bearing' : 'impact');
     }
   } else if (key === '.') {
@@ -257,7 +251,7 @@ function feedNumericKey(field, key) {
   }
 }
 function feedTimeKey(key) {
-  // MM:SS,冒号自动定位,"." 无意义直接忽略
+  // MM:SS with auto colon; "." is ignored
   const maxRaw = 10 ** TIME.totalDigits - 1;
   if (key >= '0' && key <= '9') {
     if (state.impactArmedReset) {
@@ -272,7 +266,7 @@ function feedTimeKey(key) {
     state.impact = v;
     renderNum();
     state.digCount.impact++;
-    // impact 为末框:输满停留在此等 QUEUE 提交,不自动跳首框
+    // impact is the last field: stay here for QUEUE instead of wrapping
   } else if (key === 'Backspace') {
     state.impactArmedReset = false;
     impactDisp.classList.remove('is-armed-for-reset');
@@ -309,7 +303,7 @@ function bindNumeric(input, disp, key) {
       fracReset();
       input.blur();
     } else if (e.key !== 'Tab' && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault(); // 严格数字模式:其他按键直接吞掉
+      e.preventDefault(); // swallow non-numeric keys
     }
   });
   input.addEventListener('input', () => { input.value = ''; });
@@ -327,7 +321,7 @@ function bindTime(input, disp) {
       e.preventDefault();
       feedTimeKey(e.key);
     } else if (e.key === '.') {
-      e.preventDefault(); // 冒号自动定位,小数点无意义,吞掉
+      e.preventDefault(); // "." is meaningless in MM:SS
     } else if (e.key === 'Backspace') {
       e.preventDefault();
       feedTimeKey(e.ctrlKey || e.metaKey ? 'clear' : 'Backspace');
@@ -337,7 +331,7 @@ function bindTime(input, disp) {
       e.preventDefault();
       input.blur();
     } else if (e.key !== 'Tab' && !e.ctrlKey && !e.metaKey) {
-      e.preventDefault(); // 严格数字模式:其他按键直接吞掉
+      e.preventDefault(); // swallow non-numeric keys
     }
   });
   input.addEventListener('input', () => { input.value = ''; });
@@ -360,7 +354,7 @@ chargeBtns.forEach((b, i) => b.addEventListener('click', () => {
   renderCharges();
 }));
 
-// ---------- shell type (自建下拉框,游戏内 21 种弹药;原生弹窗滚动条吃不到主题样式) ----------
+// Custom dropdown: a native select's scrollbar can't be themed.
 function sortedShells() {
   return [...state.shells].sort((a, b) => b.timesUsed - a.timesUsed);
 }
@@ -383,7 +377,7 @@ function refreshShellList() {
     b.type = 'button';
     b.dataset.val = s.label;
     b.textContent = shellBtnLabel(s.label);
-    if (SHELL_META[s.label]) b.title = SHELL_META[s.label]; // 只约定显示 code,全称放 tooltip
+    if (SHELL_META[s.label]) b.title = SHELL_META[s.label]; // dropdown shows the code; the full name goes in the tooltip
     if (s.label === keep) {
       b.setAttribute('aria-selected', 'true');
       li.classList.add('is-cur');
@@ -399,7 +393,6 @@ function openShellDd() {
   refreshShellList();
   shellDdList.hidden = false;
   shellDdBtn.setAttribute('aria-expanded', 'true');
-  // 列表高度直接吃满屏幕下方剩余空间
   const top = shellDdList.getBoundingClientRect().top;
   shellDdList.style.maxHeight = Math.max(96, window.innerHeight - top - 12) + 'px';
   shellHl = -1;
@@ -411,7 +404,7 @@ function closeShellDd() {
 function chooseShell(label) {
   state.shellInput = label;
   shellDdBtn.textContent = shellBtnLabel(label);
-  flap(shellDdBtn); // 选择后翻一次
+  flap(shellDdBtn);
   closeShellDd();
   shellDdBtn.focus({ preventScroll: true });
 }
@@ -439,11 +432,10 @@ function bumpShellUsage() {
   copy[i] = { ...copy[i], timesUsed: copy[i].timesUsed + 1 };
   state.shells = copy;
   persistShells();
-  refreshShellList(); // 常用弹药自动排前面,保持当前选中
+  refreshShellList(); // re-sorts most-used first, keeps the current pick
 }
 function loadShells() {
-  // 只把 localStorage 里的 timesUsed 合并进默认弹药表。
-  // 旧版本存下的表可能少弹药 / 字段损坏,整表替换会让弹药从下拉里消失。
+  // Merge only timesUsed into the default list; swapping in a stale stored table would drop shells.
   const base = SHELL_DEFAULTS.map(label => ({ label, shellSpeed: 0.7, timesUsed: 0 }));
   try {
     const raw = localStorage.getItem('shells');
@@ -483,10 +475,9 @@ function bindShell() {
       closeShellDd();
     }
   });
-  flap(shellDdBtn); // 下拉框出现时翻一次
+  flap(shellDdBtn);
 }
 
-// ---------- side (LEFT/RIGHT 单选,替代原自由文本 Label) ----------
 function renderSide() {
   sideBtns.forEach(b => {
     const sel = b.dataset.side === state.side;
@@ -535,10 +526,10 @@ function renderQueue() {
       '<button data-act="dim" data-id="' + t.id + '"><svg viewBox="0 0 7 5" shape-rendering="crispEdges"><rect x="0" y="2" width="1" height="1"/><rect x="1" y="3" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="5" y="1" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/></svg></button>' +
       '</div></article></div>';
   }).join('') + '</section>';
-  state.flashIds.clear(); // 出现动画只播一次,后续重排不再触发
-  if (window.__ironFit) window.__ironFit(); // 队列高度变化后重新适配视口
+  state.flashIds.clear(); // play the entry animation once, not on every re-render
+  if (window.__ironFit) window.__ironFit(); // queue height changed, re-fit the viewport
 }
-// 队列只绑一个委托监听:整列重建也不会漏绑/重复绑(原先每次 render 给每张卡片的每个按钮重绑一次)
+// One delegated listener survives full re-renders without duplicate bindings.
 function bindQueue() {
   queueEl.addEventListener('click', e => {
     const btn = e.target.closest('button');
@@ -553,7 +544,7 @@ function bindQueue() {
     const i = state.queue.findIndex(t => t.id === id);
     if (i === -1) return;
     if (act === 'del') {
-      // 删除后其后续卡片依次重播出现动画
+      // animate in the cards following the deleted one
       state.flashIds = new Set(state.queue.slice(i + 1).map(t => t.id));
       state.queue = state.queue.filter(t => t.id !== id);
     } else if (act === 'dim') {
@@ -570,7 +561,6 @@ function bindQueue() {
   });
 }
 
-// ---------- 计算 ----------
 function calculate() {
   armResetAll();
   const distKm = state.distance / 100;
@@ -580,7 +570,7 @@ function calculate() {
   const e = calcElevation(distKm, ch);
   const t = calcTTA(distKm, ch, currentShell()?.shellSpeed);
   if (e === undefined || t === undefined) { showError('INSUFFICIENT CHARGES'); return [-1, -1]; }
-  // 可选:预计命中时间 MM:SS → 发射时间点 = 命中 - ETA
+  // optional impact time -> fire time = impact - ETA
   let fire = null;
   if (state.impact !== 0) {
     const ss = state.impact % 100;
@@ -588,7 +578,7 @@ function calculate() {
     fire = impactToSec(state.impact) - t;
     if (fire < 0) { showError('TOO LATE'); return [-1, -1]; }
   }
-  bumpShellUsage(); // 只有真正算成功才计入"常用弹药",失败(时间非法/太晚)不该污染排序
+  bumpShellUsage(); // only a successful calculation counts towards "most used"
   clearError();
   elevTween.tweenTo(e);
   ttaFireMode = fire !== null;
@@ -616,10 +606,8 @@ function calculateAndQueue() {
   }
 }
 
-// ---------- 九宫格触屏键盘 ----------
 const PAD_FIELDS = ['distance', 'bearing', 'impact'];
 function syncPadKey() {
-  // 末框 impact 时 NEXT 变 QUEUE
   const nk = document.getElementById('num-next');
   if (nk) nk.textContent = state.activeField === 'impact' ? 'QUEUE' : 'NEXT';
 }
@@ -633,12 +621,10 @@ function focusField(f) {
 function feedPad(k) {
   if (k === 'next') {
     if (state.activeField === 'impact') {
-      // 末框上 NEXT 变 QUEUE:触发计算+入队,再跳回首框
       calculateAndQueue();
       focusField('distance');
       return;
     }
-    // 其余框之间循环,无视按钮与下拉框
     const i = PAD_FIELDS.indexOf(state.activeField);
     focusField(PAD_FIELDS[(i + 1 + PAD_FIELDS.length) % PAD_FIELDS.length]);
     return;
@@ -649,7 +635,7 @@ function feedPad(k) {
   } else {
     feedNumericKey(f, k);
   }
-  // 只有没触发满位自动跳转时才回到原框;跳转后保持新框高亮
+  // keep the pad on this field unless auto-advance already moved it
   if (state.activeField !== f) return;
   const el = document.getElementById(f);
   if (el && document.activeElement !== el) el.focus({ preventScroll: true });
@@ -660,7 +646,6 @@ function bindNumpad() {
   });
 }
 
-// ---------- 启动 ----------
 bindNumeric(distInput, distDisp, 'distance');
 bindNumeric(bearInput, bearDisp, 'bearing');
 bindTime(impactInput, impactDisp);
@@ -670,7 +655,7 @@ bindNumpad();
 bindQueue();
 syncPadKey();
 $('#btn-clear-impact').addEventListener('click', () => {
-  // 全清所有输入值(shell/side 也重置),不动队列;高亮框重置到第一个框
+  // reset every input (shell/side too) but keep the queue
   state.distance = 0;
   state.bearing = 0;
   state.impact = 0;

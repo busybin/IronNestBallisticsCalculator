@@ -66,7 +66,7 @@
     schedule();
     window.addEventListener('resize', schedule, { passive: true });
     window.addEventListener('orientationchange', schedule, { passive: true });
-    // 手机地址栏收放 / 软键盘弹起只改 visualViewport,不改 window 尺寸
+    // mobile URL bar / soft keyboard resize visualViewport, not window
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', schedule, { passive: true });
     }
