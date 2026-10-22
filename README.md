@@ -1,5 +1,9 @@
 # Iron Nest Ballistics Calculator
 
+<p align="center">
+  <a href="https://buymeacoffee.com/busybin"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="56"></a>
+</p>
+
 ![Iron Nest Ballistics Calculator](./screenshot.png)
 
 A static, single-page ballistics calculator for **Iron Nest**. Enter distance,
