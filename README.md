@@ -43,6 +43,10 @@ so these are unique visitors, not raw page loads.
 **Nothing is tracked until you configure it**: with no site code set,
 `counter.js` makes no request at all and the counter stays hidden.
 
+This deployment is configured: `counter.js` in this repository sets
+`CODE = 'busybin'`, so visits to the published site are counted there. Remove
+that value if you host your own copy.
+
 To enable:
 
 1. Sign up at <https://www.goatcounter.com/signup>. The *account name* you pick
