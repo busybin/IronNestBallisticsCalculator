@@ -13,8 +13,8 @@ Nest ballistics calculator.
 
 ## Third-party assets
 
-- `VT323.woff2` — the VT323 font by Peter Hull, licensed under the
-  [SIL Open Font License 1.1](https://scripts.sil.org/OFL).
+- `VT323.woff2` — the VT323 font by Peter Hull, licensed under the SIL Open
+  Font License 1.1; the full text is in [`VT323-OFL.txt`](VT323-OFL.txt).
 - `favicon.ico` — originates from the original site and is included for visual
   parity; rights remain with the original author.
 
